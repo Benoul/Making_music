@@ -1,5 +1,9 @@
 import torch.nn.functional as F
 import random
+import torch
+import pretty_midi
+from setting_up import MusicRNN, unique_notes, int_to_note, seq_length, encoded
+from train import note_sequence, model
 
 def generate(model, seed_seq, length=100, temperature=1.0):
     model.eval()
@@ -32,4 +36,4 @@ def notes_to_midi(note_sequence, output_file='generated.mid'):
     midi.write(output_file)
 
 note_sequence = generate(model, seed_seq=encoded[:seq_length], length=200, temperature=0.8)
-notes_to_midi(note_sequence, output_file='generated_music.mid')
+notes_to_midi(note_sequence, output_file='fake_queen.mid')
