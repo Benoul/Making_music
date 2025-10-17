@@ -1,0 +1,19 @@
+model = MusicRNN(vocab_size=len(unique_notes))
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.CrossEntropyLoss()
+
+n_epochs = 20
+for epoch in range(n_epochs):
+    total_loss = 0
+    for i in range(0, len(X), 32):  # batch size 32
+        x_batch = X[i:i+32]
+        y_batch = y[i:i+32]
+
+        optimizer.zero_grad()
+        outputs, _ = model(x_batch)
+        loss = criterion(outputs[:, -1, :], y_batch)  # last output only
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    print(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
