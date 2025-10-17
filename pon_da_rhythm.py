@@ -23,13 +23,26 @@ def midi_to_notes(filepath):
 seq_length = 50
 step = 1
 
-all_notes = midi_to_notes("data/Queen - Bohemian Rhapsody.mid")
+midi_files = [
+    "data/Queen - Bohemian Rhapsody.mid",
+    "data/Queen - We Are The Champions.mid"
+]
+
+# Combine notes from all songs
+all_notes = []
+for filepath in midi_files:
+    try:
+        notes = midi_to_notes(filepath)
+        all_notes.extend(notes)
+        print(f"Loaded {len(notes)} notes from {filepath}")
+    except Exception as e:
+        print(f"Error loading {filepath}: {e}")
+
+print(f"Total notes loaded: {len(all_notes)}")
 
 # Quantize durations to discrete bins for easier learning
 def quantize_duration(duration, bins=32):
     """Quantize duration into discrete bins"""
-    # Most notes are between 0.1 and 2.0 seconds
-    # Map to bins 0-31
     duration = max(0.05, min(duration, 2.0))
     bin_idx = int((duration - 0.05) / 1.95 * (bins - 1))
     return min(bin_idx, bins - 1)
@@ -38,22 +51,19 @@ def dequantize_duration(bin_idx, bins=32):
     """Convert bin index back to duration"""
     return 0.05 + (bin_idx / (bins - 1)) * 1.95
 
-# Create vocabularies for pitch and duration
 unique_pitches = sorted(set(note['pitch'] for note in all_notes))
 pitch_to_int = {pitch: i for i, pitch in enumerate(unique_pitches)}
 int_to_pitch = {i: pitch for pitch, i in pitch_to_int.items()}
 
 duration_bins = 32
-# Durations are already in range 0-31 after quantization
 
-# Encode notes as (pitch_token, duration_token) tuples
 encoded = []
 for note in all_notes:
     pitch_token = pitch_to_int[note['pitch']]
     duration_token = quantize_duration(note['duration'], duration_bins)
     encoded.append((pitch_token, duration_token))
 
-# Create input/output pairs
+
 X_pitch, X_duration, y_pitch, y_duration = [], [], [], []
 for i in range(0, len(encoded) - seq_length, step):
     seq = encoded[i:i+seq_length]
@@ -74,29 +84,24 @@ class MusicRNN(nn.Module):
     def __init__(self, pitch_vocab_size, duration_vocab_size, 
                  embed_size=100, hidden_size=256):
         super(MusicRNN, self).__init__()
-        # Separate embeddings for pitch and duration
+
         self.pitch_embedding = nn.Embedding(pitch_vocab_size, embed_size)
         self.duration_embedding = nn.Embedding(duration_vocab_size, embed_size)
         
-        # LSTM processes combined pitch+duration features
         self.lstm = nn.LSTM(embed_size * 2, hidden_size, batch_first=True)
         
-        # Separate output heads for pitch and duration
         self.fc_pitch = nn.Linear(hidden_size, pitch_vocab_size)
         self.fc_duration = nn.Linear(hidden_size, duration_vocab_size)
 
     def forward(self, x_pitch, x_duration, hidden=None):
-        # Embed both pitch and duration
+
         pitch_emb = self.pitch_embedding(x_pitch)
         duration_emb = self.duration_embedding(x_duration)
         
-        # Concatenate embeddings
         x = torch.cat([pitch_emb, duration_emb], dim=-1)
         
-        # Process through LSTM
         out, hidden = self.lstm(x, hidden)
         
-        # Generate predictions for both pitch and duration
         pitch_out = self.fc_pitch(out)
         duration_out = self.fc_duration(out)
         
@@ -122,11 +127,9 @@ for epoch in range(n_epochs):
         
         pitch_outputs, duration_outputs, _ = model(x_pitch_batch, x_duration_batch)
         
-        # Calculate loss for both pitch and duration predictions
         loss_pitch = criterion(pitch_outputs[:, -1, :], y_pitch_batch)
         loss_duration = criterion(duration_outputs[:, -1, :], y_duration_batch)
         
-        # Combined loss
         loss = loss_pitch + loss_duration
         
         loss.backward()
@@ -191,7 +194,7 @@ def notes_to_midi(pitch_sequence, duration_sequence, output_file='generated.mid'
     midi.instruments.append(instrument)
     midi.write(output_file)
 
-# Generate music
+# Generate music!!
 seed_pitch = [note[0] for note in encoded[:seq_length]]
 seed_duration = [note[1] for note in encoded[:seq_length]]
 
