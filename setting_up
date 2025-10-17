@@ -15,7 +15,7 @@ seq_length = 50
 step = 1
 
 
-all_notes = midi_to_notes("C:\\Users\\benja\\Downloads\\Queen - Bohemian Rhapsody.mid")
+all_notes = midi_to_notes("C:\Users\benja\Downloads\Queen - Bohemian Rhapsody.mid")
 
 
 # Encode note pitches to integer tokens
